@@ -15,3 +15,7 @@ struct PairMeApp: App {
         }
     }
 }
+
+extension EnvironmentValues {
+    @Entry var peripheralManager = PeripheralManager()
+}
