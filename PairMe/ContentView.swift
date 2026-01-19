@@ -58,7 +58,6 @@ struct ContentView: View {
             } label: {
                 Text(isEditing ? "Done" : "Edit")
             }
-
         }
         .sheet(isPresented: $showAddServiceSheet) {
             AddServiceView()

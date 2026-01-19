@@ -232,23 +232,19 @@ extension PeripheralManager: CBPeripheralManagerDelegate {
 
     // MARK: didSubscribeTo
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didSubscribeTo characteristic: CBCharacteristic) {
-        Task {
-            await MainActor.run { [weak self] in
-                self?.subscribedCentrals[characteristic]?.removeAll(where: { $0 == central })
-                if self?.subscribedCentrals[characteristic] == nil {
-                    self?.subscribedCentrals[characteristic] = []
-                }
-                self?.subscribedCentrals[characteristic]?.append(central)
+        Task { @MainActor [weak self] in
+            self?.subscribedCentrals[characteristic]?.removeAll(where: { $0 == central })
+            if self?.subscribedCentrals[characteristic] == nil {
+                self?.subscribedCentrals[characteristic] = []
             }
+            self?.subscribedCentrals[characteristic]?.append(central)
         }
     }
 
     // MARK: didUnsubscribeFrom
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral, didUnsubscribeFrom characteristic: CBCharacteristic) {
-        Task {
-            await MainActor.run { [weak self] in
-                self?.subscribedCentrals[characteristic]?.removeAll(where: { $0 == central })
-            }
+        Task { @MainActor [weak self] in
+            self?.subscribedCentrals[characteristic]?.removeAll(where: { $0 == central })
         }
     }
 
@@ -275,17 +271,15 @@ extension PeripheralManager: CBPeripheralManagerDelegate {
         }
 
         if let firstRequest = requests.first {
-            Task {
-                await MainActor.run { [weak self] in
-                    do {
-                        try self?.updateValueHelper(data, for: firstRequest.characteristic, onSubscribedCentrals: nil)
-                        peripheral.respond(to: firstRequest, withResult: .success)
-                    } catch {
-                        if let peripheralManagerError = error as? PeripheralManagerError {
-                            self?.error = peripheralManagerError
-                        }
-                        peripheral.respond(to: firstRequest, withResult: .invalidHandle)
+            Task { @MainActor [weak self] in
+                do {
+                    try self?.updateValueHelper(data, for: firstRequest.characteristic, onSubscribedCentrals: nil)
+                    peripheral.respond(to: firstRequest, withResult: .success)
+                } catch {
+                    if let peripheralManagerError = error as? PeripheralManagerError {
+                        self?.error = peripheralManagerError
                     }
+                    peripheral.respond(to: firstRequest, withResult: .invalidHandle)
                 }
             }
         }
@@ -294,17 +288,15 @@ extension PeripheralManager: CBPeripheralManagerDelegate {
     func peripheralManager(_ peripheral: CBPeripheralManager, willRestoreState dict: [String: Any]) {
         let previousServices = dict[CBPeripheralManagerRestoredStateServicesKey] as? [CBMutableService] ?? []
 
-        Task {
-            await MainActor.run { [weak self] in
-                self?.addedServices = previousServices
+        Task { @MainActor [weak self] in
+            self?.addedServices = previousServices
 
-                for previousService in previousServices {
-                    guard let characteristics = previousService.characteristics else { continue }
+            for previousService in previousServices {
+                guard let characteristics = previousService.characteristics else { continue }
 
-                    for characteristic in characteristics {
-                        guard let mutableCharacteristic = characteristic as? CBMutableCharacteristic else { continue }
-                        self?.subscribedCentrals[characteristic] = mutableCharacteristic.subscribedCentrals
-                    }
+                for characteristic in characteristics {
+                    guard let mutableCharacteristic = characteristic as? CBMutableCharacteristic else { continue }
+                    self?.subscribedCentrals[characteristic] = mutableCharacteristic.subscribedCentrals
                 }
             }
         }
